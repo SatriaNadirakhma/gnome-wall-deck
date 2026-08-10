@@ -178,11 +178,22 @@ class WallpaperCarousel {
         const row = new St.BoxLayout({style_class: 'wpc-hint-row'});
 
         const addGroup = (keys, text) => {
-            const group = new St.BoxLayout({style_class: 'wpc-hint-group'});
+            const group = new St.BoxLayout({
+                style_class: 'wpc-hint-group',
+                y_align: Clutter.ActorAlign.CENTER,
+            });
             for (const key of keys) {
-                group.add_child(new St.Label({style_class: 'wpc-keycap', text: key}));
+                group.add_child(new St.Label({
+                    style_class: 'wpc-keycap',
+                    text: key,
+                    y_align: Clutter.ActorAlign.CENTER,
+                }));
             }
-            group.add_child(new St.Label({style_class: 'wpc-hint-text', text}));
+            group.add_child(new St.Label({
+                style_class: 'wpc-hint-text',
+                text,
+                y_align: Clutter.ActorAlign.CENTER,
+            }));
             row.add_child(group);
         };
 
@@ -291,7 +302,7 @@ class WallpaperCarousel {
                         `background-image: url("${uri}"); ` +
                         'background-size: cover; background-position: center;');
                 } catch (e) {
-                    // path can't be turned into a URI - leave this card as a placeholder
+                    console.error('Wallpaper Carousel: failed to load thumbnail', e);
                 }
             }
             if (i >= paths.length) {

@@ -37,7 +37,7 @@ export default class WallpaperCarouselPreferences extends ExtensionPreferences {
                         folderRow.subtitle = path;
                     }
                 } catch (e) {
-                    // dialog was cancelled, ignore
+                    console.error('Error occurred while selecting folder:', e);
                 }
             });
         });
