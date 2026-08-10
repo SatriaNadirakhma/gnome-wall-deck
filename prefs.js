@@ -12,7 +12,7 @@ export default class WallpaperCarouselPreferences extends ExtensionPreferences {
         const page = new Adw.PreferencesPage();
 
         const folderGroup = new Adw.PreferencesGroup({
-            title: 'Folder & Shortcut',
+            title: 'Folder and Shortcut',
             description: 'Set the folder that gets scanned and the shortcut that opens the carousel.',
         });
         page.add(folderGroup);
