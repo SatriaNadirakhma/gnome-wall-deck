@@ -1,0 +1,35 @@
+.wpc-card {
+    background-color: rgba(255, 255, 255, 0.06);
+    border-radius: 10px;
+    border: 2px solid rgba(255, 255, 255, 0.25);
+}
+
+.wpc-hint-row {
+    spacing: 22px;
+}
+
+.wpc-hint-group {
+    spacing: 6px;
+}
+
+.wpc-keycap {
+    background-color: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    border-radius: 6px;
+    padding: 4px 10px;
+    color: rgba(255, 255, 255, 0.95);
+    font-size: 13px;
+    font-weight: 700;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.45);
+}
+
+.wpc-hint-text {
+    color: rgba(255, 255, 255, 0.65);
+    font-size: 13px;
+}
+
+.wpc-empty {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 15px;
+    font-weight: 500;
+}

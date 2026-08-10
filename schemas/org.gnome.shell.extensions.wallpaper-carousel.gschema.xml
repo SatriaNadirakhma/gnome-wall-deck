@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="wallpaper-carousel">
+  <schema id="org.gnome.shell.extensions.wallpaper-carousel"
+          path="/org/gnome/shell/extensions/wallpaper-carousel/">
+
+    <key name="wallpaper-folder" type="s">
+      <default>""</default>
+      <summary>Wallpaper folder</summary>
+      <description>
+        Folder that is scanned for wallpaper images (jpg, jpeg, png, webp).
+        If empty, defaults to ~/Pictures/Wallpapers at runtime.
+      </description>
+    </key>
+
+    <key name="toggle-shortcut" type="as">
+      <default>["&lt;Super&gt;w"]</default>
+      <summary>Toggle wallpaper carousel</summary>
+      <description>Keybinding that opens/closes the wallpaper carousel.</description>
+    </key>
+
+    <key name="card-narrow-width" type="i">
+      <range min="80" max="400"/>
+      <default>160</default>
+      <summary>Narrow card width</summary>
+      <description>Width in pixels of unfocused cards in the carousel.</description>
+    </key>
+
+    <key name="card-expanded-width" type="i">
+      <range min="200" max="900"/>
+      <default>480</default>
+      <summary>Expanded card width</summary>
+      <description>Width in pixels of the focused (centered) card.</description>
+    </key>
+
+    <key name="card-height" type="i">
+      <range min="150" max="900"/>
+      <default>420</default>
+      <summary>Card height</summary>
+      <description>Height in pixels of every card in the carousel.</description>
+    </key>
+
+  </schema>
+</schemalist>
