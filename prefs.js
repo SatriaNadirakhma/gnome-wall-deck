@@ -62,31 +62,31 @@ export default class WallpaperCarouselPreferences extends ExtensionPreferences {
         shortcutRow.add_suffix(shortcutEntry);
         folderGroup.add(shortcutRow);
 
-        const sizeGroup = new Adw.PreferencesGroup({
-            title: 'Card size',
-            description: 'Adjust the size of the cards in the carousel (in pixels).',
-        });
-        page.add(sizeGroup);
+        // const sizeGroup = new Adw.PreferencesGroup({
+        //     title: 'Card size',
+        //     description: 'Adjust the size of the cards in the carousel (in pixels).',
+        // });
+        // page.add(sizeGroup);
 
-        const addSpin = (key, title, min, max) => {
-            const row = new Adw.ActionRow({title});
-            const adj = new Gtk.Adjustment({
-                lower: min,
-                upper: max,
-                step_increment: 10,
-                value: settings.get_int(key),
-            });
-            adj.connect('value-changed', () => {
-                settings.set_int(key, Math.round(adj.get_value()));
-            });
-            const spin = new Gtk.SpinButton({adjustment: adj, valign: Gtk.Align.CENTER});
-            row.add_suffix(spin);
-            sizeGroup.add(row);
-        };
+        // const addSpin = (key, title, min, max) => {
+        //     const row = new Adw.ActionRow({title});
+        //     const adj = new Gtk.Adjustment({
+        //         lower: min,
+        //         upper: max,
+        //         step_increment: 10,
+        //         value: settings.get_int(key),
+        //     });
+        //     adj.connect('value-changed', () => {
+        //         settings.set_int(key, Math.round(adj.get_value()));
+        //     });
+        //     const spin = new Gtk.SpinButton({adjustment: adj, valign: Gtk.Align.CENTER});
+        //     row.add_suffix(spin);
+        //     sizeGroup.add(row);
+        // };
 
-        addSpin('card-narrow-width', 'Unfocused card width', 80, 400);
-        addSpin('card-expanded-width', 'Focused card width', 200, 900);
-        addSpin('card-height', 'Card height', 150, 900);
+        // addSpin('card-narrow-width', 'Unfocused card width', 80, 400);
+        // addSpin('card-expanded-width', 'Focused card width', 200, 900);
+        // addSpin('card-height', 'Card height', 150, 900);
 
         window.add(page);
     }
