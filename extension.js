@@ -19,7 +19,7 @@ const ANIM_DURATION_MS = 380;
 const SCROLL_COOLDOWN_MS = 120;
 const THUMB_LONG_EDGE = 960;       // max dimension for cached preview thumbnails (not the applied wallpaper)
 const THUMB_CACHE_DIR = GLib.build_filenamev(
-    [GLib.get_user_cache_dir(), 'wallpaper-carousel', 'thumbs']);
+    [GLib.get_user_cache_dir(), 'gnome-wall-deck', 'thumbs']);
 
 function resolveFolder(settings) {
     let folder = settings.get_string('wallpaper-folder');
@@ -59,7 +59,7 @@ function listWallpapers(folderPath) {
 
 // Returns a path to a small, pre-scaled preview image for `path`, generating and
 // disk-caching it on first use. The full-resolution original is only ever touched
-// when the wallpaper is actually applied - the picker itself never decodes it.
+// when the wallpaper is applied. The picker itself never decodes it.
 function ensureThumbnail(path, thumbDir) {
     let info;
     try {
@@ -89,14 +89,25 @@ function ensureThumbnail(path, thumbDir) {
     }
 }
 
-function easeOutExpo(t) {
-    return t >= 1 ? 1 : 1 - Math.pow(2, -10 * t);
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+// Card dimensions are derived from the monitor's resolution rather than a
+// fixed pixel setting, so the carousel looks proportionate whether it's on a
+// 1366x768 laptop panel or a 4K display, without the user having to tune it.
+function computeCardSizes() {
+    const monitor = Main.layoutManager.primaryMonitor;
+    const cardH = Math.round(clamp(monitor.height * 0.42, 220, 760));
+    const expandedW = Math.round(cardH * 1.15);
+    const narrowW = Math.round(expandedW * 0.33);
+    return {narrowW, expandedW, cardH};
 }
 
 const Indicator = GObject.registerClass(
 class Indicator extends PanelMenu.Button {
     _init(extension) {
-        super._init(0.0, 'Wallpaper Carousel', true /* dontCreateMenu */);
+        super._init(0.0, 'Wall Deck', true /* dontCreateMenu */);
         this._extension = extension;
         this.reactive = true;
         this.add_child(new St.Icon({
@@ -114,7 +125,7 @@ class Indicator extends PanelMenu.Button {
     }
 });
 
-class WallpaperCarousel {
+class WallDeck {
     constructor(extension) {
         this._extension = extension;
         this._settings = extension._settings;
@@ -122,7 +133,6 @@ class WallpaperCarousel {
         this._paths = [];
         this._focus = 0;
         this._target = 0;
-        this._animSourceId = 0;
         this._fileMonitor = null;
         this._refreshTimeoutId = 0;
         this._cardBuildSourceId = 0;
@@ -132,9 +142,10 @@ class WallpaperCarousel {
         this._prevKeyFocus = null;
         this.isOpen = false;
 
-        this._narrowW = this._settings.get_int('card-narrow-width');
-        this._expandedW = this._settings.get_int('card-expanded-width');
-        this._cardH = this._settings.get_int('card-height');
+        const sizes = computeCardSizes();
+        this._narrowW = sizes.narrowW;
+        this._expandedW = sizes.expandedW;
+        this._cardH = sizes.cardH;
 
         this._folder = resolveFolder(this._settings);
         GLib.mkdir_with_parents(this._folder, 0o755);
@@ -162,11 +173,25 @@ class WallpaperCarousel {
         this._container.add_child(this._hintRow);
 
         this._emptyLabel = new St.Label({
-            style_class: 'wpc-empty',
+            style_class: 'wd-empty',
             text: '',
             visible: false,
         });
         this._container.add_child(this._emptyLabel);
+
+        // Zero-size, zero-opacity actor whose sole job is to carry the
+        // fractional focus value through Clutter's real animation system.
+        // translation_x is a stock ClutterActor property, so ease()-ing it
+        // runs through the actual per-stage frame clock (the same machinery
+        // GNOME 48's dynamic buffering and GNOME 50's VRR improve), unlike a
+        // hand-rolled GLib timer, which ticks on its own schedule with no
+        // relationship to when Mutter actually presents a frame.
+        this._focusDriver = new Clutter.Actor({opacity: 0, width: 0, height: 0});
+        this._container.add_child(this._focusDriver);
+        this._focusDriver.connect('notify::translation-x', () => {
+            this._focus = this._focusDriver.translation_x;
+            this._relayout();
+        });
 
         Main.layoutManager.uiGroup.add_child(this._container);
 
@@ -175,22 +200,22 @@ class WallpaperCarousel {
     }
 
     _buildHintRow() {
-        const row = new St.BoxLayout({style_class: 'wpc-hint-row'});
+        const row = new St.BoxLayout({style_class: 'wd-hint-row'});
 
         const addGroup = (keys, text) => {
             const group = new St.BoxLayout({
-                style_class: 'wpc-hint-group',
+                style_class: 'wd-hint-group',
                 y_align: Clutter.ActorAlign.CENTER,
             });
             for (const key of keys) {
                 group.add_child(new St.Label({
-                    style_class: 'wpc-keycap',
+                    style_class: 'wd-keycap',
                     text: key,
                     y_align: Clutter.ActorAlign.CENTER,
                 }));
             }
             group.add_child(new St.Label({
-                style_class: 'wpc-hint-text',
+                style_class: 'wd-hint-text',
                 text,
                 y_align: Clutter.ActorAlign.CENTER,
             }));
@@ -252,7 +277,7 @@ class WallpaperCarousel {
         // decode at all), so the layout and overlay are visible right away.
         for (const path of this._paths) {
             const card = new St.Widget({
-                style_class: 'wpc-card',
+                style_class: 'wd-card',
                 reactive: true,
                 width: this._narrowW,
                 height: this._cardH,
@@ -278,6 +303,12 @@ class WallpaperCarousel {
         this._xPosBuf = new Float64Array(this._cards.length);
         this._orderBuf = new Int32Array(this._cards.length);
 
+        // Setting translation_x can synchronously fire notify::translation-x,
+        // which calls _relayout() - so this has to come after the buffers
+        // above exist, not before.
+        this._focusDriver.remove_all_transitions();
+        this._focusDriver.translation_x = restoreIndex;
+
         this._layoutStaticWidgets();
         this._lastStackFocus = NaN;
         this._relayout();
@@ -302,7 +333,7 @@ class WallpaperCarousel {
                         `background-image: url("${uri}"); ` +
                         'background-size: cover; background-position: center;');
                 } catch (e) {
-                    console.error('Wallpaper Carousel: failed to load thumbnail', e);
+                    console.error('Wall Deck: failed to load thumbnail', e);
                 }
             }
             if (i >= paths.length) {
@@ -358,15 +389,15 @@ class WallpaperCarousel {
             const w = widths[i];
             const x = Math.round(xPos[i] + offsetX);
 
-            if (card._wpcW !== w || card._wpcH !== this._cardH) {
+            if (card._wdW !== w || card._wdH !== this._cardH) {
                 card.set_size(w, this._cardH);
-                card._wpcW = w;
-                card._wpcH = this._cardH;
+                card._wdW = w;
+                card._wdH = this._cardH;
             }
-            if (card._wpcX !== x || card._wpcY !== yPos) {
+            if (card._wdX !== x || card._wdY !== yPos) {
                 card.set_position(x, yPos);
-                card._wpcX = x;
-                card._wpcY = yPos;
+                card._wdX = x;
+                card._wdY = yPos;
             }
         }
 
@@ -391,32 +422,18 @@ class WallpaperCarousel {
             return;
         this._target = target;
 
-        if (this._animSourceId) {
-            GLib.source_remove(this._animSourceId);
-            this._animSourceId = 0;
-        }
-
-        const start = this._focus;
-        const delta = this._target - start;
-        const startTime = GLib.get_monotonic_time();
-
-        // Driven by the GLib main loop timer (not Clutter's frame clock), so it
-        // doesn't depend on this timeline being associated with any particular
-        // actor/stage - it just needs the main loop to be running, which it
-        // always is inside gnome-shell.
-        this._animSourceId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 16, () => {
-            const elapsedMs = (GLib.get_monotonic_time() - startTime) / 1000;
-            const p = Math.min(1, elapsedMs / ANIM_DURATION_MS);
-            this._focus = start + delta * easeOutExpo(p);
-            this._relayout();
-
-            if (p >= 1) {
+        // ease() on a stock actor property runs through Clutter's real
+        // per-stage frame clock. Calling it again while a previous ease is
+        // still in flight retargets that transition smoothly instead of
+        // starting a second competing one.
+        this._focusDriver.ease({
+            translation_x: this._target,
+            duration: ANIM_DURATION_MS,
+            mode: Clutter.AnimationMode.EASE_OUT_EXPO,
+            onComplete: () => {
                 this._focus = this._target;
                 this._relayout();
-                this._animSourceId = 0;
-                return GLib.SOURCE_REMOVE;
-            }
-            return GLib.SOURCE_CONTINUE;
+            },
         });
     }
 
@@ -466,7 +483,7 @@ class WallpaperCarousel {
             bg.set_string('picture-uri-dark', uri);
             bg.set_string('picture-options', 'zoom');
         } catch (e) {
-            console.error('Wallpaper Carousel: failed to apply wallpaper', e);
+            console.error('Wall Deck: failed to apply wallpaper', e);
         }
         this.close();
     }
@@ -492,6 +509,17 @@ class WallpaperCarousel {
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
         });
 
+        // Re-derive card sizes in case the monitor changed since last open
+        // (e.g. an external display was connected/disconnected).
+        const sizes = computeCardSizes();
+        if (sizes.narrowW !== this._narrowW || sizes.expandedW !== this._expandedW ||
+            sizes.cardH !== this._cardH) {
+            this._narrowW = sizes.narrowW;
+            this._expandedW = sizes.expandedW;
+            this._cardH = sizes.cardH;
+            this._pendingRebuild = true;
+        }
+
         if (this._pendingRebuild) {
             this._pendingRebuild = false;
             this._rebuildCards();
@@ -506,10 +534,8 @@ class WallpaperCarousel {
             return;
         this.isOpen = false;
 
-        if (this._animSourceId) {
-            GLib.source_remove(this._animSourceId);
-            this._animSourceId = 0;
-        }
+        if (this._focusDriver)
+            this._focusDriver.remove_all_transitions();
         if (this._grab) {
             Main.popModal(this._grab);
             this._grab = null;
@@ -549,14 +575,14 @@ class WallpaperCarousel {
     }
 }
 
-export default class WallpaperCarouselExtension extends Extension {
+export default class WallDeckExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
 
         // Build the picker FIRST. It's cheap (no folder scan / image decode happens
         // here), and doing this before the keybinding/indicator exist means
         // togglePicker() can never be called while this._picker is still undefined.
-        this._picker = new WallpaperCarousel(this);
+        this._picker = new WallDeck(this);
 
         this._indicator = new Indicator(this);
         Main.panel.addToStatusArea(this.uuid, this._indicator);

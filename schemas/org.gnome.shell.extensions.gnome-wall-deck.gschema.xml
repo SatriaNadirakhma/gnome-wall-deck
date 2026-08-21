@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-wall-deck">
+  <schema id="org.gnome.shell.extensions.gnome-wall-deck"
+          path="/org/gnome/shell/extensions/gnome-wall-deck/">
+
+    <key name="wallpaper-folder" type="s">
+      <default>""</default>
+      <summary>Wallpaper folder</summary>
+      <description>
+        Folder that is scanned for wallpaper images (jpg, jpeg, png, webp).
+        If empty, defaults to ~/Pictures/Wallpapers at runtime.
+      </description>
+    </key>
+
+    <key name="toggle-shortcut" type="as">
+      <default>["&lt;Super&gt;w"]</default>
+      <summary>Toggle wallpaper carousel</summary>
+      <description>Keybinding that opens/closes the wallpaper carousel.</description>
+    </key>
+
+  </schema>
+</schemalist>

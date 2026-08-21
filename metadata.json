@@ -1,9 +1,9 @@
 {
-    "uuid": "wallpaper-carousel@lamex30-port.github.io",
-    "name": "Wallpaper Carousel",
-    "description": "Slanted coverflow-style wallpaper picker for GNOME Shell, ported from lamex30's KDE Plasma wall-picker. Point it at a folder, press the shortcut, and flip through your wallpapers in a 3D carousel. Drop new images into the folder and they show up automatically next time you open it.",
+    "uuid": "gnome-wall-deck@github.io",
+    "name": "Wall Deck",
+    "description": "A coverflow-style wallpaper picker for GNOME Shell, inspired by lamex30's KDE Plasma wall-picker. Point it at a folder, press the shortcut, and flip through your wallpapers as a deck of cards that expand as you focus them. Drop new images into the folder and they show up automatically next time you open it.",
     "shell-version": ["45", "46", "47", "48", "49", "50"],
     "url": "https://github.com/lamex30/wall-picker",
-    "settings-schema": "org.gnome.shell.extensions.wallpaper-carousel",
-    "gettext-domain": "wallpaper-carousel"
+    "settings-schema": "org.gnome.shell.extensions.gnome-wall-deck",
+    "gettext-domain": "gnome-wall-deck"
 }
